@@ -11,25 +11,25 @@ resource "aws_security_group" "public_ec2_sg" {
 
 resource "aws_vpc_security_group_ingress_rule" "allow_http_public_ec2" {
   security_group_id = aws_security_group.public_ec2_sg.id
-  cidr_ipv4         = "0.0.0.0/0"
+  referenced_security_group_id = aws_security_group.alb_sg.id
   from_port         = 80
   to_port           = 80
   ip_protocol       = "tcp"
 
   tags = {
-    Name = "allow_http_public_ec2"
+    Name = "allow_http_from_alb"
   }
 }
 
 resource "aws_vpc_security_group_ingress_rule" "allow_https_public_ec2" {
   security_group_id = aws_security_group.public_ec2_sg.id
-  cidr_ipv4         = "0.0.0.0/0"
+  referenced_security_group_id = aws_security_group.alb_sg.id
   from_port         = 443
   to_port           = 443
   ip_protocol       = "tcp"
 
   tags = {
-    Name = "allow_https_public_ec2"
+    Name = "allow_https_from_alb"
   }
 }
 
@@ -85,5 +85,50 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_private_sg" {
 
   tags = {
     Name = "allow_all_private_ec2"
+  }
+}
+
+# ALB security group
+resource "aws_security_group" "alb_sg" {
+  name        = "alb-sg"
+  description = "Security group for ALB"
+  vpc_id      = module.vpc_a.vpc_id
+
+  tags = {
+    Name = "ALB-sg"
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "allow_http_from_world" {
+  security_group_id = aws_security_group.alb_sg.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+
+  tags = {
+    Name = "allow_http_from_world"
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "allow_https_from_world" {
+  security_group_id = aws_security_group.alb_sg.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+
+  tags = {
+    Name = "allow_https_from_world"
+  }
+}
+
+resource "aws_vpc_security_group_egress_rule" "allow_all_at_alb" {
+  security_group_id = aws_security_group.alb_sg.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+
+  tags = {
+    Name = "allow_all_from_alb"
   }
 }
