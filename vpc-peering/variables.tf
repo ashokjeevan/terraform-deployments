@@ -28,10 +28,6 @@ variable "igw_name" {
   default = "tf_igw"
 }
 
-variable "instance_type" {
-  type = string
-}
-
 variable "key_pair_name" {
   type = string
 }
@@ -39,3 +35,5 @@ variable "key_pair_name" {
 variable "my_ip" {
   type = string
 }
+
+variable "ec2_instance_type" {}

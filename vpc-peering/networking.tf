@@ -1,5 +1,6 @@
 module "vpc_a" {
-  source = "./modules/vpc"
+  # source = "./modules/vpc"
+  source = "git::https://github.com/ashokjeevan/terraform-modules.git//vpc"
 
   vpc_cidr_block       = "10.0.0.0/16"
   vpc_name             = "vpc_a"
@@ -11,7 +12,7 @@ module "vpc_a" {
 }
 
 module "vpc_b" {
-  source = "./modules/vpc"
+  source = "git::https://github.com/ashokjeevan/terraform-modules.git//vpc"
 
   vpc_cidr_block       = "192.168.0.0/16"
   vpc_name             = "vpc_b"
@@ -19,39 +20,19 @@ module "vpc_b" {
   azs                  = data.aws_availability_zones.azs.names
 }
 
-# VPC Peering
-resource "aws_vpc_peering_connection" "peering_connection_vpca_vpcb" {
-  peer_owner_id = data.aws_caller_identity.current.id # target peer VPC owner id
-  peer_vpc_id   = module.vpc_a.vpc_id                 # target peer VPC id
-  vpc_id        = module.vpc_b.vpc_id                 # requestor VPC id
-  auto_accept   = true
-}
-
-# get default route table id for vpc a
-data "aws_route_table" "vpc_a_main_route_table" {
-  vpc_id = module.vpc_a.vpc_id
-
-  filter {
-    name   = "association.main"
-    values = ["true"]
-  }
-}
-
-# get default route table id for vpc b
-data "aws_route_table" "vpc_b_main_route_table" {
-  vpc_id = module.vpc_b.vpc_id
-
-  filter {
-    name   = "association.main"
-    values = ["true"]
-  }
+module "vpc_peering_vpc_a_vpc_b" {
+  source = "git::https://github.com/ashokjeevan/terraform-modules.git//vpc-peering"
+  aws_account_id = data.aws_caller_identity.current.account_id
+  target_vpc_id = module.vpc_a.vpc_id
+  requestor_vpc_id = module.vpc_b.vpc_id
+  peering_connection_auto_accept = true
 }
 
 # add route to vpc b in vpc_a route table
 resource "aws_route" "route_to_vpc_a" {
   route_table_id            = data.aws_route_table.vpc_b_main_route_table.id
   destination_cidr_block    = module.vpc_a.vpc_cidr_block
-  vpc_peering_connection_id = aws_vpc_peering_connection.peering_connection_vpca_vpcb.id
+  vpc_peering_connection_id = module.vpc_peering_vpc_a_vpc_b.vpc_peering_connection_id
   depends_on                = [data.aws_route_table.vpc_b_main_route_table]
 }
 
@@ -59,6 +40,6 @@ resource "aws_route" "route_to_vpc_a" {
 resource "aws_route" "route_to_vpc_b" {
   route_table_id            = data.aws_route_table.vpc_a_main_route_table.id
   destination_cidr_block    = module.vpc_b.vpc_cidr_block
-  vpc_peering_connection_id = aws_vpc_peering_connection.peering_connection_vpca_vpcb.id
+  vpc_peering_connection_id = module.vpc_peering_vpc_a_vpc_b.vpc_peering_connection_id
   depends_on                = [data.aws_route_table.vpc_a_main_route_table]
 }
