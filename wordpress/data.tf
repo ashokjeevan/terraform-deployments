@@ -18,3 +18,13 @@ data "aws_ami" "amazon_linux_2" {
 }
 
 data "aws_caller_identity" "current" {}
+
+# get default route table (for private subnets)
+data "aws_route_table" "wodpress_vpc_main_route_table" {
+  vpc_id = module.wordpress_vpc.vpc_id
+
+  filter {
+    name   = "association.main"
+    values = ["true"]
+  }
+}
